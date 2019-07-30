@@ -1,0 +1,8 @@
+spring:
+  redis:
+    cluster:
+      nodes: 10.150.8.113:7001,10.150.8.107:7003,10.150.8.143:7005
+      maxRedirects: 5
+      timeout: 5000
+      expireSeconds: 259200
+    prefix: "myPrefix:"
