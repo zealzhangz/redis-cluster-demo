@@ -3,7 +3,9 @@ package com.zealzhangz.redisclusterdemo.redis.config;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CachingConfigurerSupport;
 import org.springframework.cache.annotation.EnableCaching;
@@ -19,6 +21,8 @@ import org.springframework.data.redis.connection.jedis.JedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
+import org.springframework.util.StringUtils;
+import redis.clients.jedis.JedisPoolConfig;
 
 import java.lang.reflect.Method;
 import java.util.HashMap;
@@ -36,6 +40,9 @@ public class RedisClusterConfig extends CachingConfigurerSupport {
     private String prefix;
     @Value("${spring.redis.cluster.expireSeconds}")
     private Integer expireSeconds;
+
+    @Autowired
+    private RedisProperties properties;
 
 
     /**
@@ -76,6 +83,16 @@ public class RedisClusterConfig extends CachingConfigurerSupport {
         return new RedisClusterConfiguration(new MapPropertySource("RedisClusterConfiguration", source));
     }
 
+    private JedisPoolConfig jedisPoolConfig() {
+        JedisPoolConfig jedisPoolConfig = new JedisPoolConfig();
+        jedisPoolConfig.setMinIdle(properties.getPool().getMinIdle());
+        jedisPoolConfig.setMaxIdle(properties.getPool().getMaxIdle());
+        jedisPoolConfig.setMaxTotal(properties.getPool().getMaxActive());
+        jedisPoolConfig.setMaxWaitMillis(properties.getPool().getMaxWait());
+
+        return jedisPoolConfig;
+    }
+
     /**
      * Configure connection pool
      *
@@ -83,7 +100,10 @@ public class RedisClusterConfig extends CachingConfigurerSupport {
      * @return
      */
     private RedisConnectionFactory connectionFactory(RedisClusterConfiguration configuration) {
-        JedisConnectionFactory connectionFactory = new JedisConnectionFactory(configuration);
+        JedisConnectionFactory connectionFactory = new JedisConnectionFactory(configuration,jedisPoolConfig());
+        if(!StringUtils.isEmpty(properties.getPassword())){
+            connectionFactory.setPassword(properties.getPassword());
+        }
         connectionFactory.afterPropertiesSet();
         return connectionFactory;
     }
